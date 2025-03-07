@@ -259,72 +259,79 @@ export default function Home() {
               // Process the content to ensure proper formatting in production
               let formattedContent = newContent;
               
-              // Ensure proper Markdown structure for headers
-              formattedContent = formattedContent.replace(/^(#+)(?!\s)/gm, '$1 ');
+              // Fix malformed headings (###text, ##text, #text)
+              formattedContent = formattedContent.replace(/^(#{1,6})([^#\s])/gm, '$1 $2');
               
-              // Ensure proper spacing for list items
-              formattedContent = formattedContent.replace(/^(\s*[-*+])(?!\s)/gm, '$1 ');
-              formattedContent = formattedContent.replace(/^(\s*\d+\.)(?!\s)/gm, '$1 ');
+              // Fix incorrect spacing in headers that have multiple #
+              formattedContent = formattedContent.replace(/^(#{1,6})\s+([^#])/gm, '$1 $2');
               
-              // Preserve indentation for nested lists
-              formattedContent = formattedContent.replace(/^(\s+)[-*+](?!\s)/gm, '$1- ');
+              // Remove excessive heading markers (####...) and normalize
+              formattedContent = formattedContent.replace(/^#{7,}/gm, '###### ');
               
-              // Ensure proper line breaks between sections (headers)
-              formattedContent = formattedContent.replace(/^(#+.*)\n(?!\n|#+)/gm, '$1\n\n');
+              // Fix list items without proper spacing (- text or * text)
+              formattedContent = formattedContent.replace(/^(\s*)([*\-+])([^\s])/gm, '$1$2 $3');
+              
+              // Fix numbered lists without proper spacing (1.text)
+              formattedContent = formattedContent.replace(/^(\s*\d+\.)([^\s])/gm, '$1 $2');
+              
+              // Remove excessive asterisks and markdown artifacts
+              formattedContent = formattedContent.replace(/\*{3,}/g, '**');
+              
+              // Fix jumbled source markers and citations
+              formattedContent = formattedContent.replace(/Source\d+[:#\-*]+/g, '\n**Source:** ');
+              
+              // Fix malformed table markers
+              formattedContent = formattedContent.replace(/\|\s*-+\s*\|/g, '| --- |');
+              
+              // Fix Alt markers appearing in the text
+              formattedContent = formattedContent.replace(/Alt['']?\s+(?=[a-z])/gi, '');
               
               // Ensure proper spacing around list items
-              formattedContent = formattedContent.replace(/^(\s*[-*+]\s.*)\n(?!\n|\s*[-*+]|\s*\d+\.)/gm, '$1\n\n');
-              
-              // Fix table formatting if needed
-              if (formattedContent.includes('|') && !formattedContent.includes('| --')) {
-                formattedContent = formattedContent.replace(/\|\s*\n\|\s*/g, '|\n|');
-              }
+              formattedContent = formattedContent.replace(/^(\s*[*\-+]\s+[^\n]+)(\n)(?=[^*\-+\s\n])/gm, '$1\n\n');
               
               // Fix code blocks if they're not properly formatted
               formattedContent = formattedContent.replace(/```(\w+)(?!\n)/g, '```$1\n');
               formattedContent = formattedContent.replace(/([^\n])```(\s*)$/g, '$1\n```$2');
               
-              // Ensure the sources table has proper structure
-              if (formattedContent.includes('## Sources') && !formattedContent.includes('| Number | Source')) {
-                const sourcesTableFormat = `\n\n## Sources\n| Number | Source | Description |\n|---------|---------|-------------|\n`;
-                
-                // Split the content to isolate the sources section and replace it properly
-                const parts = formattedContent.split('## Sources');
-                if (parts.length > 1) {
-                  // Find where the sources section ends
-                  const sourcesSectionEnd = parts[1].indexOf('\n\n');
-                  if (sourcesSectionEnd > -1) {
-                    // Replace only the sources section header
-                    parts[1] = sourcesTableFormat.replace('## Sources', '') + parts[1].substring(sourcesSectionEnd);
-                  } else {
-                    // If no clear end to the section, just append the table
-                    parts[1] = sourcesTableFormat.replace('## Sources', '');
-                  }
-                  formattedContent = parts[0] + '## Sources' + parts[1];
-                }
-                
-                // Regenerate the sources entries if needed
-                if (!formattedContent.includes('| 1 |')) {
-                  const sourceEntries = resultsWithImages.map((result: SearchResult, index: number) => 
-                    `| ${index + 1} | [${result.title}](${result.url}) | ${result.snippet || result.content.slice(0, 150)}${result.content.length > 150 ? '...' : ''} |`
-                  ).join('\n');
+              // Ensure double linebreaks between sections
+              formattedContent = formattedContent.replace(/(\n#{1,6}[^\n]+)\n(?=[^\n])/g, '$1\n\n');
+              
+              // Fix hashtag formatting
+              formattedContent = formattedContent.replace(/(^|\n)#+\s+and\S*/g, '$1## Additional Information');
+              
+              // Fix the table header structure in sources if it exists
+              if (formattedContent.includes('# Sources') || formattedContent.includes('## Sources')) {
+                // If a source table exists but is malformed
+                if (formattedContent.includes('| Number') || formattedContent.includes('|Number')) {
+                  const tableStart = Math.max(
+                    formattedContent.lastIndexOf('# Sources'), 
+                    formattedContent.lastIndexOf('## Sources')
+                  );
                   
-                  // Find the table header row and insert source entries after it
-                  const tableHeaderPos = formattedContent.indexOf('|---------|---------|-------------|');
-                  if (tableHeaderPos > -1) {
-                    formattedContent = 
-                      formattedContent.substring(0, tableHeaderPos + '|---------|---------|-------------|'.length) + 
-                      '\n' + sourceEntries + 
-                      formattedContent.substring(tableHeaderPos + '|---------|---------|-------------|'.length);
-                  } else {
-                    // Try another common table header format
-                    const alternativeHeaderPos = formattedContent.indexOf('|---------|---------|-------------');
-                    if (alternativeHeaderPos > -1) {
-                      formattedContent = 
-                        formattedContent.substring(0, alternativeHeaderPos + '|---------|---------|-------------'.length) + 
-                        '|\n' + sourceEntries + 
-                        formattedContent.substring(alternativeHeaderPos + '|---------|---------|-------------'.length);
+                  if (tableStart > -1) {
+                    // Extract everything after the Sources heading
+                    const tableSection = formattedContent.substring(tableStart);
+                    
+                    // Create a proper sources table
+                    const sourceEntries = resultsWithImages.map((result: SearchResult, index: number) => 
+                      `| ${index + 1} | [${result.title}](${result.url}) | ${result.snippet || result.content.slice(0, 150)}${result.content.length > 150 ? '...' : ''} |`
+                    ).join('\n');
+                    
+                    const properTable = `\n\n| Number | Source | Description |\n|---|---|---|\n${sourceEntries}\n`;
+                    
+                    // Find and replace the table in tableSection using string operations instead of regex
+                    let newSourcesSection = tableSection;
+                    const tableHeaderIndex = tableSection.indexOf('\n|');
+                    if (tableHeaderIndex > -1) {
+                      const tableEndIndex = tableSection.indexOf('\n\n', tableHeaderIndex);
+                      if (tableEndIndex > -1) {
+                        newSourcesSection = tableSection.substring(0, tableHeaderIndex) + properTable + tableSection.substring(tableEndIndex);
+                      } else {
+                        newSourcesSection = tableSection.substring(0, tableHeaderIndex) + properTable;
+                      }
                     }
+                    
+                    formattedContent = formattedContent.substring(0, tableStart) + newSourcesSection;
                   }
                 }
               }
@@ -782,44 +789,34 @@ export default function Home() {
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
-                              // Handle potential HTML elements that might slip through
-                              p: ({ node, children, ...props }) => {
+                              p: ({ children, ...props }) => {
                                 const content = String(children);
-                                // If the paragraph contains only a table, don't wrap it in a p tag
                                 if (content.trim().startsWith('|') && content.trim().endsWith('|')) {
                                   return <div>{children}</div>;
                                 }
                                 return <p className="text-gray-700 my-3" {...props}>{children}</p>;
                               },
-                              // Handle headings with proper styling and spacing
-                              h1: ({ node, ...props }) => (
-                                <h1 className="text-2xl font-bold mt-8 mb-4 text-gray-900" {...props} />
+                              h1: ({ children, ...props }) => (
+                                <h1 className="text-2xl font-bold mt-8 mb-4 text-gray-900 border-b pb-2" {...props}>{children}</h1>
                               ),
-                              h2: ({ node, ...props }) => (
-                                <h2 className="text-xl font-semibold mt-6 mb-3 text-gray-900" {...props} />
+                              h2: ({ children, ...props }) => (
+                                <h2 className="text-xl font-semibold mt-6 mb-3 text-gray-900" {...props}>{children}</h2>
                               ),
-                              h3: ({ node, ...props }) => (
-                                <h3 className="text-lg font-medium mt-5 mb-2 text-gray-900" {...props} />
+                              h3: ({ children, ...props }) => (
+                                <h3 className="text-lg font-medium mt-5 mb-2 text-gray-900" {...props}>{children}</h3>
                               ),
-                              h4: ({ node, ...props }) => (
-                                <h4 className="text-base font-medium mt-4 mb-2 text-gray-900" {...props} />
+                              h4: ({ children, ...props }) => (
+                                <h4 className="text-base font-medium mt-4 mb-2 text-gray-900" {...props}>{children}</h4>
                               ),
-                              // Handle lists with proper spacing and indentation
-                              ul: ({ node, ...props }) => (
-                                <ul className="list-disc pl-6 my-4 space-y-2" {...props} />
+                              ul: ({ children, ...props }) => (
+                                <ul className="list-disc pl-6 my-4 space-y-2" {...props}>{children}</ul>
                               ),
-                              ol: ({ node, ...props }) => (
-                                <ol className="list-decimal pl-6 my-4 space-y-2" {...props} />
+                              ol: ({ children, ...props }) => (
+                                <ol className="list-decimal pl-6 my-4 space-y-2" {...props}>{children}</ol>
                               ),
-                              li: ({ children, ...props }) => {
-                                // Simplified approach that avoids type checking issues
-                                return (
-                                  <li className="mb-1" {...props}>
-                                    {children}
-                                  </li>
-                                );
-                              },
-                              // Enhanced table handling
+                              li: ({ children, ...props }) => (
+                                <li className="mb-1" {...props}>{children}</li>
+                              ),
                               table: ({ node, ...props }) => (
                                 <div className="my-8 overflow-x-auto rounded-lg border border-gray-200">
                                   <table className="w-full text-left border-collapse" {...props} />
@@ -844,7 +841,6 @@ export default function Home() {
                                 />
                               ),
                               td: ({ node, ...props }) => {
-                                // Check if the cell contains a markdown link
                                 const linkMatch = props.children?.toString().match(/\[(.*?)\]\((.*?)\)/);
                                 if (linkMatch) {
                                   const [_, text, url] = linkMatch;
@@ -893,7 +889,6 @@ export default function Home() {
                                           {data.map((row, i) => (
                                             <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                                               {row.map((cell, j) => {
-                                                // Check if the cell contains a markdown link
                                                 const linkMatch = cell.match(/\[(.*?)\]\((.*?)\)/);
                                                 if (linkMatch) {
                                                   const [_, text, url] = linkMatch;

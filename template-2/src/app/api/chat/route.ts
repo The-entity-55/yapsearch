@@ -16,24 +16,47 @@ export const dynamic = 'force-dynamic';
 
 // Helper function to ensure proper Markdown formatting
 function ensureProperMarkdown(text: string): string {
-  // Basic Markdown fixes for common issues
+  // Replace any malformed markdown with properly formatted markdown
   let result = text;
   
-  // Ensure headers have space after #
-  result = result.replace(/^(#+)(?!\s)/gm, '$1 ');
+  // Fix malformed headings (###text, ##text, #text)
+  result = result.replace(/^(#{1,6})([^#\s])/gm, '$1 $2');
   
-  // Ensure list items have proper spacing
-  result = result.replace(/^(\s*[-*+])(?!\s)/gm, '$1 ');
-  result = result.replace(/^(\s*\d+\.)(?!\s)/gm, '$1 ');
+  // Fix incorrect spacing in headers that have multiple #
+  result = result.replace(/^(#{1,6})\s+([^#])/gm, '$1 $2');
   
-  // Preserve indentation for nested lists
-  result = result.replace(/^(\s+)[-*+](?!\s)/gm, '$1- ');
+  // Remove excessive heading markers (####...) and normalize
+  result = result.replace(/^#{7,}/gm, '###### ');
   
-  // Ensure proper line breaks between sections
-  result = result.replace(/^(#+.*)\n(?!$|\s*\n|#+)/gm, '$1\n\n');
+  // Fix list items without proper spacing (- text or * text)
+  result = result.replace(/^(\s*)([*\-+])([^\s])/gm, '$1$2 $3');
   
-  // Ensure proper spacing around list items
-  result = result.replace(/^(\s*[-*+]\s.*)\n(?!$|\s*\n|\s*[-*+]|\s*\d+\.)/gm, '$1\n\n');
+  // Fix numbered lists without proper spacing (1.text)
+  result = result.replace(/^(\s*\d+\.)([^\s])/gm, '$1 $2');
+
+  // Remove excessive asterisks and markdown artifacts
+  result = result.replace(/\*{3,}/g, '**');
+  
+  // Fix jumbled source markers and citations
+  result = result.replace(/Source\d+[:#\-*]+/g, '\n**Source:** ');
+  
+  // Fix malformed table markers
+  result = result.replace(/\|\s*-+\s*\|/g, '| --- |');
+  
+  // Fix Alt markers appearing in the text
+  result = result.replace(/Alt['']?\s+(?=[a-z])/gi, '');
+  
+  // Fix dangling or mismatched backticks
+  result = result.replace(/([^`])`([^`])/g, '$1 $2');
+  
+  // Ensure double linebreaks between sections
+  result = result.replace(/(\n#{1,6}[^\n]+)\n(?=[^\n])/g, '$1\n\n');
+  
+  // Ensure proper spacing after list items
+  result = result.replace(/^(\s*[*\-+]\s+[^\n]+)(\n)(?=[^*\-+\s\n])/gm, '$1\n\n');
+  
+  // Fix numbered lists that become unnumbered mid-list
+  result = result.replace(/^(\s*)\d+\.\s*(.+)(\n+)(\s*)[*\-+]\s+/gm, '$1$2$3$41. ');
   
   return result;
 }
@@ -41,33 +64,59 @@ function ensureProperMarkdown(text: string): string {
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
+    
+    // Create a much more explicit instruction set to force proper formatting
+    const systemInstructions = `You are an AI assistant that responds with perfectly formatted Markdown.
+    
+Rules for formatting your response:
+1. Always start headings with a # symbol followed by a space: "# Heading 1" not "#Heading1"
+2. Use proper hierarchy: # Main Heading, ## Sub-heading, ### Smaller heading
+3. Ensure all list items have a space after the bullet: "- Item" not "-Item"
+4. Put blank lines between paragraphs and sections
+5. Format sources with proper citations and references
+6. Do not use excessive formatting symbols like *** or ###
+7. Do not include strange markers like "Source1" or "Alt" in the output
+8. Tables should be properly formatted with | and - symbols
+9. When listing sources, use a consistent format: "## Sources" followed by a numbered list
 
-    // Add formatting guidelines to the system message
-    const enhancedMessages = Array.isArray(messages) ? [...messages] : [];
-    
-    // Add a system message at the beginning if there isn't one already
-    if (enhancedMessages.length === 0 || enhancedMessages[0].role !== 'system') {
-      enhancedMessages.unshift({
+Example of proper formatting:
+# Main Title
+
+## Section 1
+This is a paragraph with properly formatted text.
+
+- This is a list item
+- This is another list item
+  - This is a nested list item
+
+## Section 2
+More properly formatted content here.
+
+## Sources
+1. [First Source](https://example.com) - Description
+2. [Second Source](https://example.com) - Description`;
+
+    // Build enhanced messages
+    const enhancedMessages = [
+      {
         role: 'system',
-        content: `You are an AI assistant that provides well-structured, properly formatted responses. 
-        Always use clean Markdown formatting for your responses with:
-        - Clear headings with # symbols followed by a space
-        - Properly indented and formatted lists
-        - Proper spacing between sections
-        - Consistent table formatting
-        - Source citations in a structured format
-        
-        Format all content exactly like it would appear in a professional document.`
-      });
-    }
+        content: systemInstructions
+      }
+    ];
     
-    // If last message is from user, add formatting instructions
-    if (enhancedMessages.length > 0 && enhancedMessages[enhancedMessages.length - 1].role === 'user') {
-      const lastMessage = enhancedMessages[enhancedMessages.length - 1];
-      enhancedMessages[enhancedMessages.length - 1] = {
-        ...lastMessage,
-        content: `${lastMessage.content}\n\nIMPORTANT: Format your response in a clean, structured manner with proper Markdown. Use # for main headings followed by a space, proper indentation for lists, and ensure tables are properly formatted. Structure your response exactly like a professional research report with clearly delineated sections.`
-      };
+    // Add original messages but include formatting instructions in the first user message
+    if (Array.isArray(messages) && messages.length > 0) {
+      for (let i = 0; i < messages.length; i++) {
+        // For user messages, append formatting instructions
+        if (messages[i].role === 'user') {
+          enhancedMessages.push({
+            role: 'user',
+            content: `${messages[i].content}\n\nIMPORTANT: Format your entire response using proper, clean Markdown. Do not include any strange formatting symbols or markers.`
+          });
+        } else {
+          enhancedMessages.push(messages[i]);
+        }
+      }
     }
 
     const response = await fetch(DEEPSEEK_API_URL, {
@@ -124,7 +173,7 @@ export async function POST(req: Request) {
               try {
                 const parsed = JSON.parse(data);
                 
-                // If there's content in the delta, ensure it's properly formatted
+                // Apply aggressive formatting fixes to each content chunk
                 if (parsed.choices?.[0]?.delta?.content) {
                   parsed.choices[0].delta.content = ensureProperMarkdown(parsed.choices[0].delta.content);
                 }
