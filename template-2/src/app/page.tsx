@@ -811,14 +811,10 @@ export default function Home() {
                               ol: ({ node, ...props }) => (
                                 <ol className="list-decimal pl-6 my-4 space-y-2" {...props} />
                               ),
-                              li: ({ node, children, ...props }) => {
-                                // Check if this is a nested list item
-                                const isNested = node.children?.some(child => 
-                                  child.type === 'list' || 
-                                  (child.type === 'paragraph' && child.children?.some(c => c.type === 'list'))
-                                );
+                              li: ({ children, ...props }) => {
+                                // Simplified approach that avoids type checking issues
                                 return (
-                                  <li className={`${isNested ? 'mb-2' : 'mb-1'}`} {...props}>
+                                  <li className="mb-1" {...props}>
                                     {children}
                                   </li>
                                 );
