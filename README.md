@@ -1,6 +1,6 @@
-hello everyone, this is my project yapsearch.
+hello everyone, this is my project DeepSearch.
 
-these search and reasoning capabilities will be added to our agent within yapthread (app.yapthread.com). 
+these search and reasoning capabilities will be added to our agent within Taheri AI Solutions. 
 
 feel free to fork this.
 

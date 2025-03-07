@@ -54,9 +54,21 @@ interface SuggestionType {
 // Add TopBar component
 const TopBar = () => {
   return (
-    <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center px-6 z-50">
-      <h1 className="text-2xl font-serif text-gray-900 tracking-tight">YapSearch</h1>
-    </div>
+    <motion.div 
+      className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center px-6 z-50"
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
+      <motion.h1 
+        className="text-2xl font-serif text-gray-900 tracking-tight"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        DeepSearch
+      </motion.h1>
+    </motion.div>
   );
 };
 
@@ -312,26 +324,55 @@ export default function Home() {
             {!hasSubmitted ? (
               <motion.div 
                 className="min-h-screen flex flex-col items-center justify-center"
-                initial={{ opacity: 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0, y: -50 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.5 }}
               >
                 <div className="text-center mb-12">
-                  <div className="inline-block px-4 py-1.5 bg-gray-900 text-white rounded-full text-sm font-medium mb-6">
-                    Powered by YapThread
-                  </div>
-                  <h1 className="text-5xl font-serif text-gray-900 mb-4 tracking-tight">Your AI Powered Content Research Assistant</h1>
-                  <p className="text-xl text-gray-600 font-light max-w-2xl mx-auto leading-relaxed">
+                  <motion.div 
+                    className="inline-block px-4 py-1.5 bg-gray-900 text-white rounded-full text-sm font-medium mb-6"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                  >
+                    Powered by Taheri AI Solutions
+                  </motion.div>
+                  <motion.h1 
+                    className="text-5xl font-serif text-gray-900 mb-4 tracking-tight"
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+                  >
+                    AI Powered DeepResearch Assistant
+                  </motion.h1>
+                  <motion.p 
+                    className="text-xl text-gray-600 font-light max-w-2xl mx-auto leading-relaxed"
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.7, duration: 0.6 }}
+                  >
                     Do research for content in seconds, so you can spend more time going viral.
-                  </p>
+                  </motion.p>
                 </div>
-                <form onSubmit={handleSubmit} className="w-full max-w-[704px] mx-4">
-                  <div className="relative bg-gray-50 rounded-xl shadow-md border border-gray-300">
+                
+                <motion.form 
+                  onSubmit={handleSubmit} 
+                  className="w-full max-w-[704px] mx-4"
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.9, duration: 0.6 }}
+                >
+                  <motion.div 
+                    className="relative bg-gray-50 rounded-xl shadow-md border border-gray-300"
+                    whileHover={{ boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
+                    transition={{ duration: 0.3 }}
+                  >
                     <textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Ask a question..."
-                      className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200"
+                      className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200 text-black"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -340,21 +381,29 @@ export default function Home() {
                       }}
                     />
                     <div className="absolute right-3 bottom-3 flex items-center gap-2">
-                      <button
+                      <motion.button
                         type="submit"
                         disabled={isLoading}
                         className="px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium relative overflow-hidden group"
+                        whileTap={{ scale: 0.97 }}
+                        whileHover={{ scale: 1.03 }}
+                        transition={{ duration: 0.2 }}
                       >
                         <span className="relative z-10">{isLoading ? 'Thinking...' : 'Send'}</span>
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:via-white/15 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      </button>
+                      </motion.button>
                     </div>
-                  </div>
+                  </motion.div>
                   
                   {/* Suggestions */}
-                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                    {suggestions.map((suggestion) => (
-                      <button
+                  <motion.div 
+                    className="mt-4 flex flex-wrap gap-2 justify-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.1, duration: 0.5 }}
+                  >
+                    {suggestions.map((suggestion, index) => (
+                      <motion.button
                         key={suggestion.label}
                         onClick={() => handleSuggestionClick(suggestion)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -362,28 +411,54 @@ export default function Home() {
                             ? 'bg-gray-900 text-white'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                          delay: 1.2 + (index * 0.1),
+                          duration: 0.5,
+                          ease: "easeOut"
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                       >
                         {suggestion.label}
-                      </button>
+                      </motion.button>
                     ))}
-                  </div>
-                </form>
+                  </motion.div>
+                </motion.form>
               </motion.div>
             ) : (
               <motion.div 
                 className="space-y-6 pb-32"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ 
+                  duration: 0.6, 
+                  ease: [0.25, 0.1, 0.25, 1.0] 
+                }}
               >
                 {chatSections.map((section, index) => (
-                  <div key={index} className="pt-8 border-b border-gray-200 last:border-0">
+                  <motion.div 
+                    key={index} 
+                    className="pt-8 border-b border-gray-200 last:border-0"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ 
+                      delay: index * 0.15,
+                      duration: 0.5
+                    }}
+                  >
                     {/* Query */}
-                    <div className="mb-8">
+                    <motion.div 
+                      className="mb-8"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.1 + index * 0.15, duration: 0.5 }}
+                    >
                       <p className="text-lg text-gray-800">
                         {section.query}
                       </p>
-                    </div>
+                    </motion.div>
 
                     {/* Loading States */}
                     {isLoading && (
@@ -470,11 +545,28 @@ export default function Home() {
                         </div>
                         <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
                           {section.searchResults.map((result, idx) => (
-                            <div 
+                            <motion.div 
                               key={idx}
                               className="flex-shrink-0 w-[300px] bg-gray-50 border border-gray-200 rounded-xl overflow-hidden"
+                              initial={{ opacity: 0, x: 20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ 
+                                delay: 0.2 + idx * 0.1,
+                                duration: 0.4, 
+                                ease: "easeOut" 
+                              }}
+                              whileHover={{ 
+                                y: -5, 
+                                boxShadow: "0 10px 30px rgba(0,0,0,0.1)", 
+                                borderColor: "rgba(0,0,0,0.2)" 
+                              }}
                             >
-                              <div className="h-40 bg-gray-200 overflow-hidden relative">
+                              <motion.div 
+                                className="h-40 bg-gray-200 overflow-hidden relative"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.3 + idx * 0.1 }}
+                              >
                                 {result.image ? (
                                   <>
                                     <div className="absolute inset-0 bg-gray-200 animate-pulse" />
@@ -496,8 +588,13 @@ export default function Home() {
                                     </svg>
                                   </div>
                                 )}
-                              </div>
-                              <div className="p-4">
+                              </motion.div>
+                              <motion.div 
+                                className="p-4"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 + idx * 0.1 }}
+                              >
                                 <a 
                                   href={result.url} 
                                   target="_blank" 
@@ -507,8 +604,8 @@ export default function Home() {
                                   {result.title}
                                 </a>
                                 <p className="text-sm text-gray-600 line-clamp-3">{result.content}</p>
-                              </div>
-                            </div>
+                              </motion.div>
+                            </motion.div>
                           ))}
                         </div>
                       </div>
@@ -531,64 +628,83 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Thinking Process */}
+                    {/* Reasoning Panel */}
                     {section.reasoning && (
-                      <div className="mb-12">
-                        <div className="flex justify-between items-center mb-4">
-                          <div className="flex items-center gap-2">
-                            <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
-                            <h3 className="text-sm font-semibold text-gray-600">Thinking Process:</h3>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
+                      <motion.div 
+                        className="mt-6 mb-12 bg-gray-50 rounded-xl border border-gray-200"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2, duration: 0.4 }}
+                      >
+                        <div className="flex justify-between items-center p-4">
+                          <h3 className="text-sm font-semibold text-gray-700">Thinking Process</h3>
+                          <div className="flex items-center gap-3">
+                            <motion.button
                               onClick={() => {
-                                setSelectedMessageData({ reasoning: messages[messages.length - 1]?.reasoningInput });
+                                setSelectedMessageData({ reasoning: section.reasoning });
                                 setShowReasoningModal(true);
                               }}
                               className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                             >
                               <span>View Full Input</span>
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                               </svg>
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
                               onClick={() => toggleReasoning(index)}
                               className="text-gray-600 hover:text-gray-700"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
                             >
-                              <svg 
-                                className={`w-5 h-5 transform transition-transform ${section.isReasoningCollapsed ? '-rotate-90' : 'rotate-0'}`} 
+                              <motion.svg 
+                                className="w-5 h-5"
                                 fill="none" 
                                 stroke="currentColor" 
                                 viewBox="0 0 24 24"
+                                animate={{ 
+                                  rotate: section.isReasoningCollapsed ? -90 : 0,
+                                  opacity: [1, 0.8, 1]
+                                }}
+                                transition={{ duration: 0.3 }}
                               >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
+                              </motion.svg>
+                            </motion.button>
                           </div>
                         </div>
                         <motion.div 
-                          className="pl-4 border-l-2 border-gray-300"
+                          className="pl-4 border-l-2 border-gray-300 overflow-hidden"
                           initial={false}
                           animate={{ 
                             height: section.isReasoningCollapsed ? 0 : 'auto',
                             opacity: section.isReasoningCollapsed ? 0 : 1
                           }}
-                          transition={{ duration: 0.3 }}
+                          transition={{ duration: 0.4, ease: "easeInOut" }}
                         >
-                          <div className="text-sm text-gray-600 leading-relaxed overflow-hidden">
+                          <div className="text-sm text-gray-600 leading-relaxed pb-4 pr-4">
                             {section.reasoning}
                           </div>
                         </motion.div>
-                      </div>
+                      </motion.div>
                     )}
 
                     {/* Final Report */}
                     {section.response && (
-                      <div className="mt-12 mb-16">
-                        <div className="prose prose-blue max-w-none space-y-4 text-gray-800 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6">
+                      <motion.div 
+                        className="mt-12 mb-16"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                      >
+                        <motion.div 
+                          className="prose prose-blue max-w-none space-y-4 text-gray-800 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.3, duration: 0.8 }}
+                        >
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
@@ -616,20 +732,20 @@ export default function Home() {
                                 />
                               ),
                               td: ({ node, ...props }) => {
-                                // Check if the content includes a markdown link
-                                const content = props.children?.toString() || '';
-                                if (content.match(/\[.*?\]\(.*?\)/)) {
+                                // Check if the cell contains a markdown link
+                                const linkMatch = props.children?.toString().match(/\[(.*?)\]\((.*?)\)/);
+                                if (linkMatch) {
+                                  const [_, text, url] = linkMatch;
                                   return (
                                     <td className="py-3 px-4 text-sm text-gray-500">
-                                      <ReactMarkdown
-                                        components={{
-                                          a: ({ node, ...linkProps }) => (
-                                            <a {...linkProps} className="text-blue-600 hover:text-blue-800 hover:underline" target="_blank" rel="noopener noreferrer" />
-                                          )
-                                        }}
+                                      <a 
+                                        href={url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-blue-600 hover:text-blue-800 hover:underline"
                                       >
-                                        {content}
-                                      </ReactMarkdown>
+                                        {text}
+                                      </a>
                                     </td>
                                   );
                                 }
@@ -664,11 +780,30 @@ export default function Home() {
                                         <tbody className="bg-white">
                                           {data.map((row, i) => (
                                             <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                                              {row.map((cell, j) => (
-                                                <td key={j} className="py-3 px-4 text-sm text-gray-500">
-                                                  {cell}
-                                                </td>
-                                              ))}
+                                              {row.map((cell, j) => {
+                                                // Check if the cell contains a markdown link
+                                                const linkMatch = cell.match(/\[(.*?)\]\((.*?)\)/);
+                                                if (linkMatch) {
+                                                  const [_, text, url] = linkMatch;
+                                                  return (
+                                                    <td key={j} className="py-3 px-4 text-sm text-gray-500">
+                                                      <a 
+                                                        href={url} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                                                      >
+                                                        {text}
+                                                      </a>
+                                                    </td>
+                                                  );
+                                                }
+                                                return (
+                                                  <td key={j} className="py-3 px-4 text-sm text-gray-500">
+                                                    {cell}
+                                                  </td>
+                                                );
+                                              })}
                                             </tr>
                                           ))}
                                         </tbody>
@@ -712,8 +847,8 @@ export default function Home() {
                           >
                             {section.response}
                           </ReactMarkdown>
-                        </div>
-                      </div>
+                        </motion.div>
+                      </motion.div>
                     )}
 
                     {section.error && (
@@ -721,7 +856,7 @@ export default function Home() {
                         {section.error}
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
               </motion.div>
             )}
@@ -731,14 +866,33 @@ export default function Home() {
 
       {/* Updated floating input box styling - show immediately after first submission */}
       {hasSubmitted && (
-        <div className="fixed bottom-6 left-0 right-0 flex justify-center">
-          <form onSubmit={handleSubmit} className="w-full max-w-[704px] mx-4">
-            <div className="relative bg-gray-50 rounded-xl shadow-md border border-gray-300">
+        <motion.div 
+          className="fixed bottom-6 left-0 right-0 flex justify-center"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ 
+            type: "spring", 
+            stiffness: 260, 
+            damping: 20,
+            duration: 0.5 
+          }}
+        >
+          <motion.form 
+            onSubmit={handleSubmit} 
+            className="w-full max-w-[704px] mx-4"
+            whileHover={{ scale: 1.01 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div 
+              className="relative bg-gray-50 rounded-xl shadow-md border border-gray-300"
+              whileHover={{ boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
+              transition={{ duration: 0.3 }}
+            >
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask a question..."
-                className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200"
+                className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200 text-black"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -747,18 +901,21 @@ export default function Home() {
                 }}
               />
               <div className="absolute right-3 bottom-3 flex items-center gap-2">
-                <button
+                <motion.button
                   type="submit"
                   disabled={isLoading}
                   className="px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium relative overflow-hidden group"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <span className="relative z-10">{isLoading ? 'Thinking...' : 'Send'}</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:via-white/15 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                </button>
+                </motion.button>
               </div>
-            </div>
-          </form>
-        </div>
+            </motion.div>
+          </motion.form>
+        </motion.div>
       )}
 
       {/* Modal for Tavily Data */}
