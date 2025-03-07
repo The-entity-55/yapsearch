@@ -255,11 +255,76 @@ export default function Home() {
             } else if (parsed.choices?.[0]?.delta?.content) {
               const newContent = (assistantMessage.content || '') + parsed.choices[0].delta.content;
               assistantMessage.content = newContent;
+              
+              // Process the content to ensure proper formatting in production
+              let formattedContent = newContent;
+              
+              // Ensure proper Markdown structure for headers
+              formattedContent = formattedContent.replace(/^(#+)(?!\s)/gm, '$1 ');
+              
+              // Ensure proper spacing for list items
+              formattedContent = formattedContent.replace(/^(\s*[-*+])(?!\s)/gm, '$1 ');
+              formattedContent = formattedContent.replace(/^(\s*\d+\.)(?!\s)/gm, '$1 ');
+              
+              // Fix table formatting if needed
+              if (formattedContent.includes('|') && !formattedContent.includes('| --')) {
+                formattedContent = formattedContent.replace(/\|\s*\n\|\s*/g, '|\n|');
+              }
+              
+              // Fix code blocks if they're not properly formatted
+              formattedContent = formattedContent.replace(/```(\w+)(?!\n)/g, '```$1\n');
+              formattedContent = formattedContent.replace(/([^\n])```(\s*)$/g, '$1\n```$2');
+              
+              // Ensure the sources table has proper structure
+              if (formattedContent.includes('## Sources') && !formattedContent.includes('| Number | Source')) {
+                const sourcesTableFormat = `\n\n## Sources\n| Number | Source | Description |\n|---------|---------|-------------|\n`;
+                
+                // Split the content to isolate the sources section and replace it properly
+                const parts = formattedContent.split('## Sources');
+                if (parts.length > 1) {
+                  // Find where the sources section ends
+                  const sourcesSectionEnd = parts[1].indexOf('\n\n');
+                  if (sourcesSectionEnd > -1) {
+                    // Replace only the sources section header
+                    parts[1] = sourcesTableFormat.replace('## Sources', '') + parts[1].substring(sourcesSectionEnd);
+                  } else {
+                    // If no clear end to the section, just append the table
+                    parts[1] = sourcesTableFormat.replace('## Sources', '');
+                  }
+                  formattedContent = parts[0] + '## Sources' + parts[1];
+                }
+                
+                // Regenerate the sources entries if needed
+                if (!formattedContent.includes('| 1 |')) {
+                  const sourceEntries = resultsWithImages.map((result: SearchResult, index: number) => 
+                    `| ${index + 1} | [${result.title}](${result.url}) | ${result.snippet || result.content.slice(0, 150)}${result.content.length > 150 ? '...' : ''} |`
+                  ).join('\n');
+                  
+                  // Find the table header row and insert source entries after it
+                  const tableHeaderPos = formattedContent.indexOf('|---------|---------|-------------|');
+                  if (tableHeaderPos > -1) {
+                    formattedContent = 
+                      formattedContent.substring(0, tableHeaderPos + '|---------|---------|-------------|'.length) + 
+                      '\n' + sourceEntries + 
+                      formattedContent.substring(tableHeaderPos + '|---------|---------|-------------|'.length);
+                  } else {
+                    // Try another common table header format
+                    const alternativeHeaderPos = formattedContent.indexOf('|---------|---------|-------------');
+                    if (alternativeHeaderPos > -1) {
+                      formattedContent = 
+                        formattedContent.substring(0, alternativeHeaderPos + '|---------|---------|-------------'.length) + 
+                        '|\n' + sourceEntries + 
+                        formattedContent.substring(alternativeHeaderPos + '|---------|---------|-------------'.length);
+                    }
+                  }
+                }
+              }
+              
               setChatSections(prev => {
                 const updated = [...prev];
                 updated[sectionIndex] = {
                   ...updated[sectionIndex],
-                  response: newContent
+                  response: formattedContent
                 };
                 return updated;
               });
@@ -708,6 +773,16 @@ export default function Home() {
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
+                              // Handle potential HTML elements that might slip through
+                              p: ({ node, children, ...props }) => {
+                                const content = String(children);
+                                // If the paragraph contains only a table, don't wrap it in a p tag
+                                if (content.trim().startsWith('|') && content.trim().endsWith('|')) {
+                                  return <div>{children}</div>;
+                                }
+                                return <p {...props}>{children}</p>;
+                              },
+                              // Enhanced table handling
                               table: ({ node, ...props }) => (
                                 <div className="my-8 overflow-x-auto rounded-lg border border-gray-200">
                                   <table className="w-full text-left border-collapse" {...props} />
