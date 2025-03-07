@@ -26,6 +26,15 @@ function ensureProperMarkdown(text: string): string {
   result = result.replace(/^(\s*[-*+])(?!\s)/gm, '$1 ');
   result = result.replace(/^(\s*\d+\.)(?!\s)/gm, '$1 ');
   
+  // Preserve indentation for nested lists
+  result = result.replace(/^(\s+)[-*+](?!\s)/gm, '$1- ');
+  
+  // Ensure proper line breaks between sections
+  result = result.replace(/^(#+.*)\n(?!$|\s*\n|#+)/gm, '$1\n\n');
+  
+  // Ensure proper spacing around list items
+  result = result.replace(/^(\s*[-*+]\s.*)\n(?!$|\s*\n|\s*[-*+]|\s*\d+\.)/gm, '$1\n\n');
+  
   return result;
 }
 
@@ -36,12 +45,28 @@ export async function POST(req: Request) {
     // Add formatting guidelines to the system message
     const enhancedMessages = Array.isArray(messages) ? [...messages] : [];
     
+    // Add a system message at the beginning if there isn't one already
+    if (enhancedMessages.length === 0 || enhancedMessages[0].role !== 'system') {
+      enhancedMessages.unshift({
+        role: 'system',
+        content: `You are an AI assistant that provides well-structured, properly formatted responses. 
+        Always use clean Markdown formatting for your responses with:
+        - Clear headings with # symbols followed by a space
+        - Properly indented and formatted lists
+        - Proper spacing between sections
+        - Consistent table formatting
+        - Source citations in a structured format
+        
+        Format all content exactly like it would appear in a professional document.`
+      });
+    }
+    
     // If last message is from user, add formatting instructions
     if (enhancedMessages.length > 0 && enhancedMessages[enhancedMessages.length - 1].role === 'user') {
       const lastMessage = enhancedMessages[enhancedMessages.length - 1];
       enhancedMessages[enhancedMessages.length - 1] = {
         ...lastMessage,
-        content: `${lastMessage.content}\n\nIMPORTANT: Format your response in proper Markdown. Ensure all headers have spaces after # symbols, all lists have proper indentation and spacing, and tables are properly formatted.`
+        content: `${lastMessage.content}\n\nIMPORTANT: Format your response in a clean, structured manner with proper Markdown. Use # for main headings followed by a space, proper indentation for lists, and ensure tables are properly formatted. Structure your response exactly like a professional research report with clearly delineated sections.`
       };
     }
 
