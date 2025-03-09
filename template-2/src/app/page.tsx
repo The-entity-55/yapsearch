@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import remarkGfm from 'remark-gfm';
@@ -58,6 +58,293 @@ const TopBar = () => {
       <h1 className="text-2xl font-serif text-gray-900 tracking-tight">DeepSearch</h1>
     </div>
   );
+};
+
+// Add utility functions for response formatting
+const formatResponse = (content: string): string => {
+  if (!content) return '';
+  
+  // Ensure content has proper markdown structure
+  let formattedContent = content;
+  
+  // Ensure headings have space after #
+  formattedContent = formattedContent.replace(/^(#{1,6})([^#\s])/gm, '$1 $2');
+  
+  // Ensure lists have proper spacing
+  formattedContent = formattedContent.replace(/^([*-])([^\s])/gm, '$1 $2');
+  
+  // Ensure code blocks are properly formatted
+  formattedContent = formattedContent.replace(/```([^`\n]*)\n([^`]*?)```/gs, '```$1\n$2\n```');
+  
+  // Ensure tables have proper formatting
+  if (formattedContent.includes('|') && !formattedContent.includes('| --')) {
+    formattedContent = formattedContent.replace(/\|([^|\n]*)\|([^|\n]*)\|/g, '| $1 | $2 |');
+  }
+  
+  return formattedContent;
+};
+
+// Add a function to validate search results
+const validateSearchResults = (results: SearchResult[]): SearchResult[] => {
+  if (!results || !Array.isArray(results)) return [];
+  
+  return results.map(result => ({
+    title: result.title || 'Untitled Source',
+    content: result.content || 'No content available',
+    url: result.url || '#',
+    snippet: result.snippet || result.content?.slice(0, 150) || '',
+    score: result.score || 0,
+    image: result.image || undefined
+  }));
+};
+
+// Add ErrorMessage component
+const ErrorMessage = ({ message, onRetry }: { message: string, onRetry?: () => void }) => {
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-6">
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div className="ml-3">
+          <h3 className="text-sm font-medium text-red-800">Error</h3>
+          <div className="mt-2 text-sm text-red-700">
+            <p>{message}</p>
+          </div>
+          {onRetry && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={onRetry}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Add StructuredResponse component
+const StructuredResponse = ({ content, searchResults }: { content: string, searchResults?: SearchResult[] }) => {
+  // Ensure content is properly formatted
+  const formattedContent = formatResponse(content);
+  
+  // Create a custom components object that includes the section's search results
+  const customComponents = {
+    ...markdownComponents,
+    a: ({ node, ...props }: any) => {
+      const href = props.href || '';
+      const sourceMatch = href.match(/\[Source (\d+)\]/);
+      if (sourceMatch && searchResults) {
+        const sourceIndex = parseInt(sourceMatch[1]) - 1;
+        const source = searchResults[sourceIndex];
+        return (
+          <span className="inline-flex items-center group relative">
+            <a {...props} className="inline-flex items-center text-blue-600 hover:text-blue-800">
+              <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              {props.children}
+            </a>
+            {source && (
+              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50">
+                <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200 w-80">
+                  <h4 className="font-medium text-gray-900 mb-2">{source.title}</h4>
+                  <p className="text-sm text-gray-600 mb-2">{source.content}</p>
+                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                    Visit source →
+                  </a>
+                </div>
+              </div>
+            )}
+          </span>
+        );
+      }
+      return markdownComponents.a({ node, ...props });
+    }
+  };
+  
+  // Split content into sections if it has headings
+  const hasHeadings = /^#{1,6}\s.+/gm.test(formattedContent);
+  
+  if (!hasHeadings) {
+    return (
+      <div className="prose prose-blue max-w-none space-y-4 text-gray-800 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={customComponents}
+        >
+          {formattedContent}
+        </ReactMarkdown>
+      </div>
+    );
+  }
+  
+  // Split by headings for a more structured display
+  const sections = formattedContent.split(/(?=^#{1,6}\s.+$)/gm).filter(Boolean);
+  
+  return (
+    <div className="space-y-8">
+      {sections.map((section, idx) => (
+        <div key={idx} className="prose prose-blue max-w-none space-y-4 text-gray-800 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={customComponents}
+          >
+            {section}
+          </ReactMarkdown>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Extract markdown components for reuse
+const markdownComponents = {
+  // Table components
+  table: ({ node, ...props }: any) => (
+    <div className="my-8 overflow-x-auto rounded-lg border border-gray-200">
+      <table className="w-full text-left border-collapse" {...props} />
+    </div>
+  ),
+  thead: ({ node, ...props }: any) => (
+    <thead className="bg-gray-50" {...props} />
+  ),
+  tbody: ({ node, ...props }: any) => (
+    <tbody className="bg-white divide-y divide-gray-200" {...props} />
+  ),
+  tr: ({ node, ...props }: any) => (
+    <tr className="hover:bg-gray-50 transition-colors" {...props} />
+  ),
+  th: ({ node, ...props }: any) => (
+    <th className="py-3 px-4 font-medium text-sm text-gray-900 border-b border-gray-200" {...props} />
+  ),
+  // Enhanced td cell rendering
+  td: ({ node, ...props }: any) => {
+    // Check if the content includes a markdown link
+    const content = props.children?.toString() || '';
+    if (content.match(/\[.*?\]\(.*?\)/)) {
+      return (
+        <td className="py-3 px-4 text-sm text-gray-500">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              a: ({ node, ...linkProps }: any) => (
+                <a {...linkProps} className="text-blue-600 hover:text-blue-800 hover:underline" target="_blank" rel="noopener noreferrer" />
+              )
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </td>
+      );
+    }
+    return (
+      <td className="py-3 px-4 text-sm text-gray-500" {...props} />
+    );
+  },
+  // Better handling of code blocks
+  code: ({ node, inline, className, children, ...props }: any) => {
+    const match = /language-(\w+)/.exec(className || '');
+    return !inline && match ? (
+      <div className="relative">
+        <pre className={`${className} rounded-lg p-4 bg-gray-900 text-white overflow-x-auto`}>
+          <code className={className} {...props}>
+            {String(children).replace(/\n$/, '')}
+          </code>
+        </pre>
+      </div>
+    ) : (
+      <code className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 text-sm font-mono" {...props}>
+        {children}
+      </code>
+    );
+  },
+  // Better handling of pre blocks
+  pre: ({ node, children, ...props }: any) => {
+    const content = String(children);
+    if (content.includes('|') && content.includes('\n')) {
+      const rows = content.trim().split('\n');
+      const headers = rows[0].split('|').filter(Boolean).map((h: string) => h.trim());
+      const data = rows.slice(2).map((row: string) => 
+        row.split('|').filter(Boolean).map((cell: string) => cell.trim())
+      );
+
+      return (
+        <div className="my-8 overflow-x-auto">
+          <table className="w-full text-left border-collapse border border-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {headers.map((header: string, i: number) => (
+                  <th key={i} className="py-3 px-4 font-medium text-sm text-gray-900 border-b border-gray-200">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              {data.map((row: string[], i: number) => (
+                <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                  {row.map((cell: string, j: number) => (
+                    <td key={j} className="py-3 px-4 text-sm text-gray-500">
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    return <pre className="rounded-lg p-4 bg-gray-50 overflow-x-auto" {...props}>{children}</pre>;
+  },
+  // Improved heading rendering
+  h1: ({ node, ...props }: any) => (
+    <h1 className="text-3xl font-bold text-gray-900 mt-8 mb-4" {...props} />
+  ),
+  h2: ({ node, ...props }: any) => (
+    <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-3" {...props} />
+  ),
+  h3: ({ node, ...props }: any) => (
+    <h3 className="text-xl font-bold text-gray-900 mt-6 mb-3" {...props} />
+  ),
+  // Better list rendering
+  ul: ({ node, ...props }: any) => (
+    <ul className="list-disc pl-6 my-4 space-y-2" {...props} />
+  ),
+  ol: ({ node, ...props }: any) => (
+    <ol className="list-decimal pl-6 my-4 space-y-2" {...props} />
+  ),
+  li: ({ node, ...props }: any) => (
+    <li className="text-gray-800" {...props} />
+  ),
+  // Enhanced link handling
+  a: ({ node, ...props }: any) => {
+    const href = props.href || '';
+    const sourceMatch = href.match(/\[Source (\d+)\]/);
+    if (sourceMatch) {
+      return (
+        <span className="inline-flex items-center group relative">
+          <a {...props} className="inline-flex items-center text-blue-600 hover:text-blue-800">
+            <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            {props.children}
+          </a>
+        </span>
+      );
+    }
+    return (
+      <a {...props} className="text-blue-600 hover:text-blue-800 hover:underline" target="_blank" rel="noopener noreferrer" />
+    );
+  },
 };
 
 export default function Home() {
@@ -152,12 +439,15 @@ export default function Home() {
         image: searchData.images?.[index]
       }));
 
+      // Validate search results
+      const validatedResults = validateSearchResults(resultsWithImages);
+
       // Update section with search results and start thinking
       setChatSections(prev => {
         const updated = [...prev];
         updated[sectionIndex] = {
           ...updated[sectionIndex],
-          searchResults: resultsWithImages,
+          searchResults: validatedResults,
           isLoadingSources: false,
           isLoadingThinking: true
         };
@@ -165,7 +455,7 @@ export default function Home() {
       });
 
       // Step 2: Format search results for DeepSeek
-      const searchContext = resultsWithImages
+      const searchContext = validatedResults
         .map((result: SearchResult, index: number) => 
           `[Source ${index + 1}]: ${result.title}\n${result.content}\nURL: ${result.url}\n`
         )
@@ -177,7 +467,7 @@ export default function Home() {
 
       // Add sources table at the end
       const sourcesTable = `\n\n## Sources\n| Number | Source | Description |\n|---------|---------|-------------|\n` +
-        resultsWithImages.map((result: SearchResult, index: number) => 
+        validatedResults.map((result: SearchResult, index: number) => 
           `| ${index + 1} | [${result.title}](${result.url}) | ${result.snippet || result.content.slice(0, 150)}${result.content.length > 150 ? '...' : ''} |`
         ).join('\n');
 
@@ -187,7 +477,7 @@ export default function Home() {
         role: 'assistant',
         content: '',
         reasoning: '',
-        searchResults: resultsWithImages,
+        searchResults: validatedResults,
         fullTavilyData: searchData,
         reasoningInput
       };
@@ -243,11 +533,15 @@ export default function Home() {
             } else if (parsed.choices?.[0]?.delta?.content) {
               const newContent = (assistantMessage.content || '') + parsed.choices[0].delta.content;
               assistantMessage.content = newContent;
+              
+              // Format the response content for better structure
+              const formattedContent = formatResponse(newContent);
+              
               setChatSections(prev => {
                 const updated = [...prev];
                 updated[sectionIndex] = {
                   ...updated[sectionIndex],
-                  response: newContent
+                  response: formattedContent
                 };
                 return updated;
               });
@@ -263,7 +557,7 @@ export default function Home() {
         const updated = [...prev];
         updated[sectionIndex] = {
           ...updated[sectionIndex],
-          searchResults: resultsWithImages
+          searchResults: validatedResults
         };
         return updated;
       });
@@ -588,138 +882,19 @@ export default function Home() {
                     {/* Final Report */}
                     {section.response && (
                       <div className="mt-12 mb-16">
-                        <div className="prose prose-blue max-w-none space-y-4 text-gray-800 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              table: ({ node, ...props }) => (
-                                <div className="my-8 overflow-x-auto rounded-lg border border-gray-200">
-                                  <table className="w-full text-left border-collapse" {...props} />
-                                </div>
-                              ),
-                              thead: ({ node, ...props }) => (
-                                <thead className="bg-gray-50" {...props} />
-                              ),
-                              tbody: ({ node, ...props }) => (
-                                <tbody className="bg-white divide-y divide-gray-200" {...props} />
-                              ),
-                              tr: ({ node, ...props }) => (
-                                <tr 
-                                  className="hover:bg-gray-50 transition-colors" 
-                                  {...props} 
-                                />
-                              ),
-                              th: ({ node, ...props }) => (
-                                <th 
-                                  className="py-3 px-4 font-medium text-sm text-gray-900 border-b border-gray-200" 
-                                  {...props} 
-                                />
-                              ),
-                              td: ({ node, ...props }) => {
-                                // Check if the content includes a markdown link
-                                const content = props.children?.toString() || '';
-                                if (content.match(/\[.*?\]\(.*?\)/)) {
-                                  return (
-                                    <td className="py-3 px-4 text-sm text-gray-500">
-                                      <ReactMarkdown
-                                        components={{
-                                          a: ({ node, ...linkProps }) => (
-                                            <a {...linkProps} className="text-blue-600 hover:text-blue-800 hover:underline" target="_blank" rel="noopener noreferrer" />
-                                          )
-                                        }}
-                                      >
-                                        {content}
-                                      </ReactMarkdown>
-                                    </td>
-                                  );
-                                }
-                                return (
-                                  <td 
-                                    className="py-3 px-4 text-sm text-gray-500" 
-                                    {...props} 
-                                  />
-                                );
-                              },
-                              pre: ({ node, children, ...props }) => {
-                                const content = String(children);
-                                if (content.includes('|') && content.includes('\n')) {
-                                  const rows = content.trim().split('\n');
-                                  const headers = rows[0].split('|').filter(Boolean).map(h => h.trim());
-                                  const data = rows.slice(2).map(row => 
-                                    row.split('|').filter(Boolean).map(cell => cell.trim())
-                                  );
-
-                                  return (
-                                    <div className="my-8 overflow-x-auto">
-                                      <table className="w-full text-left border-collapse border border-gray-200">
-                                        <thead className="bg-gray-50">
-                                          <tr>
-                                            {headers.map((header, i) => (
-                                              <th key={i} className="py-3 px-4 font-medium text-sm text-gray-900 border-b border-gray-200">
-                                                {header}
-                                              </th>
-                                            ))}
-                                          </tr>
-                                        </thead>
-                                        <tbody className="bg-white">
-                                          {data.map((row, i) => (
-                                            <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                                              {row.map((cell, j) => (
-                                                <td key={j} className="py-3 px-4 text-sm text-gray-500">
-                                                  {cell}
-                                                </td>
-                                              ))}
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  );
-                                }
-                                return <pre {...props}>{children}</pre>;
-                              },
-                              a: ({ node, ...props }) => {
-                                const href = props.href || '';
-                                const sourceMatch = href.match(/\[Source (\d+)\]/);
-                                if (sourceMatch) {
-                                  const sourceIndex = parseInt(sourceMatch[1]) - 1;
-                                  const source = section.searchResults[sourceIndex];
-                                  return (
-                                    <span className="inline-flex items-center group relative">
-                                      <a {...props} className="inline-flex items-center text-blue-600 hover:text-blue-800">
-                                        <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                        </svg>
-                                        {props.children}
-                                      </a>
-                                      {source && (
-                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50">
-                                          <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200 w-80">
-                                            <h4 className="font-medium text-gray-900 mb-2">{source.title}</h4>
-                                            <p className="text-sm text-gray-600 mb-2">{source.content}</p>
-                                            <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
-                                              Visit source →
-                                            </a>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </span>
-                                  );
-                                }
-                                return <a {...props} className="text-blue-600 hover:text-blue-800" />;
-                              }
-                            }}
-                          >
-                            {section.response}
-                          </ReactMarkdown>
-                        </div>
+                        <StructuredResponse 
+                          content={section.response} 
+                          searchResults={section.searchResults}
+                        />
                       </div>
                     )}
 
+                    {/* Error Message */}
                     {section.error && (
-                      <div className="text-center text-red-600 mb-8">
-                        {section.error}
-                      </div>
+                      <ErrorMessage 
+                        message={section.error} 
+                        onRetry={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)} 
+                      />
                     )}
                   </div>
                 ))}
