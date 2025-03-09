@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import remarkGfm from 'remark-gfm';
+import Image from 'next/image';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -73,8 +74,8 @@ const formatResponse = (content: string): string => {
   // Ensure lists have proper spacing
   formattedContent = formattedContent.replace(/^([*-])([^\s])/gm, '$1 $2');
   
-  // Ensure code blocks are properly formatted
-  formattedContent = formattedContent.replace(/```([^`\n]*)\n([^`]*?)```/gs, '```$1\n$2\n```');
+  // Ensure code blocks are properly formatted - without using 's' flag
+  formattedContent = formattedContent.replace(/```([^`\n]*)\n([\s\S]*?)```/g, '```$1\n$2\n```');
   
   // Ensure tables have proper formatting
   if (formattedContent.includes('|') && !formattedContent.includes('| --')) {
@@ -772,15 +773,16 @@ export default function Home() {
                                 {result.image ? (
                                   <>
                                     <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                                    <img 
+                                    <Image 
                                       src={result.image.url} 
                                       alt={result.image.description || result.title}
-                                      className="w-full h-full object-cover relative z-10"
+                                      className="relative z-10"
+                                      fill
+                                      style={{ objectFit: 'cover', opacity: 0, transition: 'opacity 0.3s' }}
                                       onLoad={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         target.style.opacity = '1';
                                       }}
-                                      style={{ opacity: 0, transition: 'opacity 0.3s' }}
                                     />
                                   </>
                                 ) : (
