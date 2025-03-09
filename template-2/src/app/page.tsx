@@ -55,7 +55,7 @@ interface SuggestionType {
 const TopBar = () => {
   return (
     <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center px-6 z-50">
-      <h1 className="text-2xl font-serif text-gray-900 tracking-tight">YapSearch</h1>
+      <h1 className="text-2xl font-serif text-gray-900 tracking-tight">DeepSearch</h1>
     </div>
   );
 };
@@ -318,9 +318,9 @@ export default function Home() {
               >
                 <div className="text-center mb-12">
                   <div className="inline-block px-4 py-1.5 bg-gray-900 text-white rounded-full text-sm font-medium mb-6">
-                    Powered by YapThread
+                    Powered by Taheri AI Solutions
                   </div>
-                  <h1 className="text-5xl font-serif text-gray-900 mb-4 tracking-tight">Your AI Powered Content Research Assistant</h1>
+                  <h1 className="text-5xl font-serif text-gray-900 mb-4 tracking-tight">Your AI Powered DeepResearch Assistant</h1>
                   <p className="text-xl text-gray-600 font-light max-w-2xl mx-auto leading-relaxed">
                     Do research for content in seconds, so you can spend more time going viral.
                   </p>
@@ -331,7 +331,7 @@ export default function Home() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Ask a question..."
-                      className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200"
+                      className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200 text-black"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -738,7 +738,7 @@ export default function Home() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask a question..."
-                className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200"
+                className="w-full p-5 pr-32 rounded-xl border-2 border-transparent focus:border-gray-900 focus:shadow-lg focus:outline-none resize-none h-[92px] bg-gray-50 transition-all duration-200 text-black"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
